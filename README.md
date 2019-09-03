@@ -17,6 +17,6 @@ This parameter is a combination of any of the three letter s(scrape), e(extract)
 
 For example If you just want to extract all zip folders and merge them the programm call would be: 'python hds.py em'.
 
-It is required to have firefox installed and a version of geckdriver in the same folder as the program. (https://github.com/mozilla/geckodriver/releases).\
+It is required to have firefox installed and a version of geckdriver in the same folder as the program. (https://github.com/mozilla/geckodriver/releases) .\
 All other requirements are within requirements.txt.\
 You can easily install them with 'pip install -r requirements.txt'.
