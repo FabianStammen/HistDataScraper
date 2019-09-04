@@ -46,15 +46,12 @@ def scrap(output_folder):
             time.sleep(random.randint(1, 3))
     print('\n')
 
-    finished = False
-    while not finished:
-        values = [element.get_attribute('value') for element in driver.find_elements_by_class_name(
-            'downloadProgress')]
-        for value in values:
-            if value != '100':
-                break
-            finished = True
-        time.sleep(10)
+    driver.get('about:downloads')
+    while True:
+        time.sleep(5)
+        active = driver.find_elements_by_css_selector('button.downloadButton.downloadIconCancel')
+        if len(active) == 0:
+            break
     driver.quit()
 
 
