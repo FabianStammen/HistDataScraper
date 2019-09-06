@@ -1,5 +1,4 @@
 import os
-import random
 import re
 import sys
 import time
@@ -8,14 +7,8 @@ import zipfile
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 
-root_dir = os.getcwd()
-data_dir = os.path.join(root_dir, 'data')
-zip_dir = os.path.join(data_dir, 'zipped')
-raw_dir = os.path.join(data_dir, 'raw')
-out_dir = os.path.join(data_dir, 'output')
 
-
-def scrap(output_folder):
+def scrap(output_folder, full=False):
     url = 'http://www.histdata.com/' \
           'download-free-forex-historical-data/?/metatrader/1-minute-bar-quotes'
     options = Options()
@@ -27,6 +20,18 @@ def scrap(output_folder):
     profile.set_preference('browser.helperApps.neverAsk.saveToDisk', 'application/octet-stream')
     driver = webdriver.Firefox(options=options, firefox_profile=profile)
 
+    os.makedirs(output_folder, exist_ok=True)
+    to_be_removed = set()
+    for old_file in os.listdir(output_folder):
+        if full:
+            os.remove(os.path.join(output_folder, old_file))
+        if '.part' in old_file:
+            to_be_removed.add(old_file)
+            to_be_removed.add(old_file[:-5])
+    for part in to_be_removed:
+        if os.path.exists(os.path.join(output_folder, part)):
+            os.remove(os.path.join(output_folder, part))
+
     driver.get(url)
     forex_pair_urls = [element.get_attribute('href') for element in driver.find_elements_by_xpath(
         '//*[@class="page-content"]/table/tbody/tr/td/a')]
@@ -37,13 +42,14 @@ def scrap(output_folder):
         for j, date_url in enumerate(date_urls):
             driver.get(date_url)
             link = driver.find_element_by_id('a_file')
-            link.click()
+            if ''.join(link.text.rsplit('_', 1)) not in os.listdir(output_folder):
+                link.click()
             print(
                 '\r' + ' Download: ' + str(i + 1).zfill(len(str(len(forex_pair_urls)))) + '/' + str(
                     len(forex_pair_urls)) + ' forex pairs - ' + str(j + 1).zfill(
                     len(str(len(date_urls))))
                 + '/' + str(len(date_urls)) + ' single files', end='', flush=True)
-            time.sleep(random.randint(1, 3))
+            time.sleep(1)
     print('\n')
 
     driver.get('about:downloads')
@@ -55,19 +61,31 @@ def scrap(output_folder):
     driver.quit()
 
 
-def extract(input_folder, output_folder):
+def extract(input_folder, output_folder, full=False):
+    os.makedirs(input_folder, exist_ok=True)
+    os.makedirs(output_folder, exist_ok=True)
+    if full:
+        for old_file in os.listdir(output_folder):
+            os.remove(os.path.join(output_folder, old_file))
+
     files = os.listdir(input_folder)
     for i, file in enumerate(files):
         if file.endswith('.zip'):
-            file = os.path.join(input_folder, file)
-            with zipfile.ZipFile(file, 'r') as zip_ref:
-                zip_ref.extractall(output_folder)
+            if file[:-4] + '.csv' not in os.listdir(output_folder):
+                file = os.path.join(input_folder, file)
+                with zipfile.ZipFile(file, 'r') as zip_ref:
+                    zip_ref.extractall(output_folder)
         print('\r' + ' Extracting: ' + str(i + 1).zfill(len(str(len(files)))) + '/' + str(
             len(files)), end='', flush=True)
     print('\n')
 
 
 def merge(input_folder, output_folder):
+    os.makedirs(input_folder, exist_ok=True)
+    os.makedirs(output_folder, exist_ok=True)
+    for old_file in os.listdir(output_folder):
+        old_file = os.path.join(output_folder, old_file)
+        os.remove(old_file)
     csv_files = [a for a in os.listdir(input_folder) if a.endswith('.csv')]
     csv_files.sort()
     for i, csv_file in enumerate(csv_files):
@@ -83,26 +101,18 @@ def merge(input_folder, output_folder):
 
 
 def main():
+    root_dir = os.getcwd()
+    data_dir = os.path.join(root_dir, 'data')
+    zip_dir = os.path.join(data_dir, 'zipped')
+    raw_dir = os.path.join(data_dir, 'raw')
+    out_dir = os.path.join(data_dir, 'output')
+
     if len(sys.argv) is 1 or len(sys.argv) is 2:
         if len(sys.argv) is 1 or 's' in sys.argv[1]:
-            os.makedirs(zip_dir, exist_ok=True)
-            for old_file in os.listdir(zip_dir):
-                old_file = os.path.join(zip_dir, old_file)
-                os.remove(old_file)
-            scrap(zip_dir)
+            scrap(zip_dir, 'f' in sys.argv[1])
         if len(sys.argv) is 1 or 'e' in sys.argv[1]:
-            os.makedirs(zip_dir, exist_ok=True)
-            os.makedirs(raw_dir, exist_ok=True)
-            for old_file in os.listdir(raw_dir):
-                old_file = os.path.join(raw_dir, old_file)
-                os.remove(old_file)
-            extract(zip_dir, raw_dir)
+            extract(zip_dir, raw_dir, 'f' in sys.argv[1])
         if len(sys.argv) is 1 or 'm' in sys.argv[1]:
-            os.makedirs(raw_dir, exist_ok=True)
-            os.makedirs(out_dir, exist_ok=True)
-            for old_file in os.listdir(out_dir):
-                old_file = os.path.join(out_dir, old_file)
-                os.remove(old_file)
             merge(raw_dir, out_dir)
 
 
