@@ -44,12 +44,12 @@ def scrap(output_folder, full=False):
             link = driver.find_element_by_id('a_file')
             if ''.join(link.text.rsplit('_', 1)) not in os.listdir(output_folder):
                 link.click()
+                time.sleep(1)
             print(
                 '\r' + ' Download: ' + str(i + 1).zfill(len(str(len(forex_pair_urls)))) + '/' + str(
                     len(forex_pair_urls)) + ' forex pairs - ' + str(j + 1).zfill(
                     len(str(len(date_urls))))
                 + '/' + str(len(date_urls)) + ' single files', end='', flush=True)
-            time.sleep(1)
     print('\n')
 
     driver.get('about:downloads')
@@ -107,12 +107,16 @@ def main():
     raw_dir = os.path.join(data_dir, 'raw')
     out_dir = os.path.join(data_dir, 'output')
 
-    if len(sys.argv) is 1 or len(sys.argv) is 2:
-        if len(sys.argv) is 1 or 's' in sys.argv[1]:
+    if len(sys.argv) is 1:
+        scrap(zip_dir, False)
+        extract(zip_dir, raw_dir, False)
+        merge(raw_dir, out_dir)
+    if len(sys.argv) is 2:
+        if 's' in sys.argv[1]:
             scrap(zip_dir, 'f' in sys.argv[1])
-        if len(sys.argv) is 1 or 'e' in sys.argv[1]:
+        if 'e' in sys.argv[1]:
             extract(zip_dir, raw_dir, 'f' in sys.argv[1])
-        if len(sys.argv) is 1 or 'm' in sys.argv[1]:
+        if 'm' in sys.argv[1]:
             merge(raw_dir, out_dir)
 
 
