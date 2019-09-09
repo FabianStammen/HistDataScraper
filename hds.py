@@ -8,20 +8,24 @@ from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 
 
-def scrap(output_folder, full=False):
-    url = 'http://www.histdata.com/' \
-          'download-free-forex-historical-data/?/metatrader/1-minute-bar-quotes'
+def setup_driver(download_dir):
     options = Options()
     options.headless = True
     profile = webdriver.FirefoxProfile()
     profile.set_preference('browser.download.folderList', 2)
     profile.set_preference('browser.download.manager.showWhenStarting', False)
-    profile.set_preference('browser.download.dir', output_folder)
+    profile.set_preference('browser.download.dir', download_dir)
     profile.set_preference('browser.helperApps.neverAsk.saveToDisk', 'application/octet-stream')
-    driver = webdriver.Firefox(options=options, firefox_profile=profile)
+    return webdriver.Firefox(options=options, firefox_profile=profile)
+
+
+def scrap(output_folder, full=False):
+    url = 'http://www.histdata.com/' \
+          'download-free-forex-historical-data/?/metatrader/1-minute-bar-quotes'
+    driver = setup_driver(output_folder)
+    to_be_removed = set()
 
     os.makedirs(output_folder, exist_ok=True)
-    to_be_removed = set()
     for old_file in os.listdir(output_folder):
         if full:
             os.remove(os.path.join(output_folder, old_file))
@@ -48,15 +52,14 @@ def scrap(output_folder, full=False):
             print(
                 '\r' + ' Download: ' + str(i + 1).zfill(len(str(len(forex_pair_urls)))) + '/' + str(
                     len(forex_pair_urls)) + ' forex pairs - ' + str(j + 1).zfill(
-                    len(str(len(date_urls))))
+                        len(str(len(date_urls))))
                 + '/' + str(len(date_urls)) + ' single files', end='', flush=True)
     print('\n')
 
     driver.get('about:downloads')
     while True:
         time.sleep(5)
-        active = driver.find_elements_by_css_selector('button.downloadButton.downloadIconCancel')
-        if len(active) == 0:
+        if not driver.find_elements_by_css_selector('button.downloadButton.downloadIconCancel'):
             break
     driver.quit()
 
@@ -90,7 +93,8 @@ def merge(input_folder, output_folder):
     csv_files.sort()
     for i, csv_file in enumerate(csv_files):
         reg = re.compile('.+(?=_\\d*)')
-        with open(os.path.join(output_folder, reg.match(csv_file).group() + '.csv'), 'a') as outfile:
+        with open(os.path.join(output_folder, reg.match(csv_file).group() + '.csv'),
+                  'a') as outfile:
             csv_file = os.path.join(input_folder, csv_file)
             with open(csv_file) as infile:
                 for line in infile:
@@ -107,11 +111,11 @@ def main():
     raw_dir = os.path.join(data_dir, 'raw')
     out_dir = os.path.join(data_dir, 'output')
 
-    if len(sys.argv) is 1:
+    if len(sys.argv) == 1:
         scrap(zip_dir, False)
         extract(zip_dir, raw_dir, False)
         merge(raw_dir, out_dir)
-    if len(sys.argv) is 2:
+    if len(sys.argv) == 2:
         if 's' in sys.argv[1]:
             scrap(zip_dir, 'f' in sys.argv[1])
         if 'e' in sys.argv[1]:
