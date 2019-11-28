@@ -3,7 +3,10 @@ import re
 import sys
 import time
 import zipfile
+from datetime import datetime
 
+import requests
+from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 
@@ -20,35 +23,43 @@ def setup_driver(download_dir):
 
 
 def scrap(output_folder, full=False):
-    url = 'http://www.histdata.com/' \
-          'download-free-forex-historical-data/?/metatrader/1-minute-bar-quotes'
+    base_url = 'https://www.histdata.com'
+    url = base_url + '/download-free-forex-data/?/metastock/1-minute-bar-quotes'
     driver = setup_driver(output_folder)
-    to_be_removed = set()
+    commodities = ['WTI/USD', 'BCO/USD']
+    indexes = ['SPX/USD', 'JPX/JPY', 'NSX/USD', 'FRX/EUR', 'UDX/USD',
+               'UKX/GBP', 'GRX/EUR', 'AUX/AUD', 'HKX/HKD', 'ETX/EUR']
 
     os.makedirs(output_folder, exist_ok=True)
-    for old_file in os.listdir(output_folder):
+    last_file = ''
+    to_be_removed = set()
+    current_year = datetime.now().year
+    for old_file in sorted(os.listdir(output_folder)):
         if full:
             os.remove(os.path.join(output_folder, old_file))
-        if '.part' in old_file:
+        elif '.part' in old_file:
             to_be_removed.add(old_file)
             to_be_removed.add(old_file[:-5])
+        elif len(old_file) == 35 and int(old_file[25:-6]) < current_year:
+            to_be_removed.add(old_file)
+        elif last_file != '' and last_file[:22] != old_file[:22]:
+            to_be_removed.add(last_file)
+        last_file = old_file
     for part in to_be_removed:
         if os.path.exists(os.path.join(output_folder, part)):
             os.remove(os.path.join(output_folder, part))
 
-    driver.get(url)
-    forex_pair_urls = [element.get_attribute('href') for element in driver.find_elements_by_xpath(
-        '//*[@class="page-content"]/table/tbody/tr/td/a')]
+    forex_pair_urls = [tag.get('href') for tag in BeautifulSoup(requests.get(url).text, 'lxml')
+                       .find(class_='page-content').select('a[title]')
+                       if tag.get_text() not in commodities and tag.get_text() not in indexes]
     for i, forex_pair_url in enumerate(forex_pair_urls):
-        driver.get(forex_pair_url)
-        date_urls = [element.get_attribute('href') for element in driver.find_elements_by_xpath(
-            '//*[@class="page-content"]/p/a')]
+        date_urls = [tag.get('href') for tag in BeautifulSoup(requests.get(
+            base_url + forex_pair_url).text, 'lxml').find(class_='page-content').select('a[title]')]
         for j, date_url in enumerate(date_urls):
-            driver.get(date_url)
-            link = driver.find_element_by_id('a_file')
-            if ''.join(link.text.rsplit('_', 1)) not in os.listdir(output_folder):
-                link.click()
-                time.sleep(1)
+            link = BeautifulSoup(requests.get(base_url + date_url).text, 'lxml').find(id='a_file')
+            if ''.join(link.get_text().rsplit('_', 1)) not in os.listdir(output_folder):
+                driver.get(base_url + date_url)
+                driver.execute_script('jQuery("#file_down").submit();')
             print(
                 '\r' + ' Download: ' + str(i + 1).zfill(len(str(len(forex_pair_urls)))) + '/' + str(
                     len(forex_pair_urls)) + ' forex pairs - ' + str(j + 1).zfill(
