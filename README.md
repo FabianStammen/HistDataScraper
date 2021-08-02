@@ -1,10 +1,9 @@
 # HistDataScraper
 A simple web scraper that downloads forex history data from HistData.
 
-At the moment only the 1-minute data for Metatrader 4/5 is downloaded.\
 After the download the zip-files get extracted and then merged, based upon the forex pair.
 
-The scraper can run without ana parameters and will create an appropriate directory structure from working directory.
+The scraper can run without any parameters and will create an appropriate directory structure from working directory.
 
 working directory\
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-data\

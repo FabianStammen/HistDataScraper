@@ -1,3 +1,24 @@
+"""HistDataScraper
+A simple web scraper that downloads forex history data from HistData.
+After the download the zip-files get extracted and then merged, based upon the forex pair.
+The scraper can run without any parameters and will create an appropriate directory structure from
+working directory.
+
+When only a specific task should be executed you can give the program a parameter.
+This parameter is a combination of any of the letter s(scrape), e(extract) and m(merge) without a
+specific order.
+Additional you can add an f(full) to the parameter to do a cleanup of old files before the tasks are
+executed,
+default is only incremental downloads and extractions. Merges are always full.
+
+Example:
+    If you just want to extract all zip folders and merge them the program call would be:
+
+        $ python hds.py em
+
+It is required to have firefox installed and a version of geckodriver in the same folder as the
+program. (https://github.com/mozilla/geckodriver/releases\).
+"""
 import os
 import re
 import sys
@@ -12,6 +33,14 @@ from selenium.webdriver.firefox.options import Options
 
 
 def setup_driver(download_dir):
+    """Setup the firefox geckodriver to be headless and proper options for downloading.
+
+    Args:
+        download_dir (str): The path to the new default download folder.
+
+    Returns:
+        selenium.webdriver.Firefox: The setup geckodriver.
+    """
     options = Options()
     options.headless = True
     profile = webdriver.FirefoxProfile()
@@ -23,6 +52,12 @@ def setup_driver(download_dir):
 
 
 def scrap(output_folder, full=False):
+    """Scrap the Forex data from the web.
+
+    Args:
+        output_folder: Path to the download folder.
+        full (bool): Full download or incremental; default false.
+    """
     base_url = 'https://www.histdata.com'
     url = base_url + '/download-free-forex-data/?/metastock/1-minute-bar-quotes'
     driver = setup_driver(output_folder)
@@ -76,6 +111,13 @@ def scrap(output_folder, full=False):
 
 
 def extract(input_folder, output_folder, full=False):
+    """Extract the downloaded csv files.
+
+    Args:
+        input_folder (str): Path to input folder.
+        output_folder (str): Path to output folder.
+        full (bool): Full extraction or incremental; default false.
+    """
     os.makedirs(input_folder, exist_ok=True)
     os.makedirs(output_folder, exist_ok=True)
     if full:
@@ -95,6 +137,12 @@ def extract(input_folder, output_folder, full=False):
 
 
 def merge(input_folder, output_folder):
+    """Merges the extracted csv files according to their currency-pair.
+
+    Args:
+        input_folder (str): Path to input folder.
+        output_folder (str): Path to output folder.
+    """
     os.makedirs(input_folder, exist_ok=True)
     os.makedirs(output_folder, exist_ok=True)
     for old_file in os.listdir(output_folder):
@@ -116,6 +164,11 @@ def merge(input_folder, output_folder):
 
 
 def main():
+    """Main function
+
+    Checks for any system arguments described in the module documentation and initializes the
+    module.
+    """
     root_dir = os.getcwd()
     data_dir = os.path.join(root_dir, 'data')
     zip_dir = os.path.join(data_dir, 'zipped')
