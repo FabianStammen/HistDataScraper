@@ -4,6 +4,7 @@ of data that is not consecutive for at least 5 minutes.
 """
 import csv
 import os
+import shutil
 from collections import deque
 
 
@@ -22,8 +23,11 @@ if __name__ == '__main__':
     except FileExistsError:
         for old_file in os.listdir(forex_5m_dir):
             os.remove(os.path.join(forex_5m_dir, old_file))
-    csv_files = sorted(os.listdir(forex_1m_dir))
+    csv_files = [a for a in os.listdir(forex_1m_dir) if a.endswith('.csv')]
+    csv_files.sort()
     csv_count = len(csv_files)
+    if os.path.exists(os.path.join(forex_1m_dir, 'output.log')):
+        shutil.copyfile(os.path.join(forex_1m_dir, 'output.log'), os.path.join(forex_5m_dir, 'output.log'))
     for index_i, file in enumerate(csv_files):
         original_file = os.path.join(forex_1m_dir, file)
         new_file = os.path.join(forex_5m_dir, file.replace('M1', 'M5'))
